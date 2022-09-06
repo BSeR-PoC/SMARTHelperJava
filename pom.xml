@@ -35,7 +35,7 @@
 		</repository>
 	</repositories>
 
-	<description>Registry Server Build</description>
+	<description>SMART on FHIR Build</description>
 
 	<modules>
 		<module>smartonfhir-helper-client</module>

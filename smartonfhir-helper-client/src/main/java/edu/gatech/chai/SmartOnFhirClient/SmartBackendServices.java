@@ -26,6 +26,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import edu.gatech.chai.common.UtilitiesV1;
@@ -38,6 +39,8 @@ import io.jsonwebtoken.Jwts;
 @Component
 public class SmartBackendServices 
 {
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SmartBackendServices.class);
+
     private String privateKeyFilePath;
     private String publicKeyFilePath;
     private String jwksFilePath;
@@ -48,8 +51,21 @@ public class SmartBackendServices
     private Long jwtExp;
     private String accessToken = null;
     private Long tokenExpiration = 0L;
+    private boolean isActive = true;
+    private boolean disabled = false;
 
     public SmartBackendServices() {
+        this(null);
+    }
+
+    public SmartBackendServices(String fhirServerUrl) {
+        String disabledString = System.getenv("SMARTONFHIR");
+        if (disabledString != null && !disabledString.isBlank()) {
+            if ("disabled".equalsIgnoreCase(disabledString)) {
+                disabled = true;
+                return;
+            }
+        }
         publicKeyFilePath = System.getenv("PUBLIC_KEY_FILE");
         if (publicKeyFilePath == null || publicKeyFilePath.isBlank()) {
             publicKeyFilePath = "publicKey";
@@ -72,29 +88,34 @@ public class SmartBackendServices
 
         String myClientId = System.getenv("CLIENTID");
         if (myClientId == null || myClientId.isBlank()) {
-            setClientId("no-clientid");
+            isActive = false;
         } else {
             setClientId(myClientId);
         }
 
         String defaultfhirServerUrl = System.getenv("FHIRSERVER_URL");
-        if (defaultfhirServerUrl == null || defaultfhirServerUrl.isBlank()) {
-            setFhirServerUrl("http://no-fhir-server/");
-        } else {
-            setFhirServerUrl(defaultfhirServerUrl);
-        }
-
-        String defaultTokenUrl = System.getenv("TOKENURL");
-        if (defaultTokenUrl == null || defaultTokenUrl.isBlank()) {
-            try {
-                setTokenUrl(UtilitiesV1.findTokenUrl(getFhirServerUrl()));
-            } catch (IOException e) {
-                e.printStackTrace();
+        if (fhirServerUrl == null || fhirServerUrl.isBlank()) {
+            if (defaultfhirServerUrl != null && !defaultfhirServerUrl.isBlank()) {
+                setFhirServerUrl(defaultfhirServerUrl);
+            } else {
+                isActive = false;
             }
         } else {
-            // find the 
-            setTokenUrl(defaultTokenUrl);
+            setFhirServerUrl(fhirServerUrl);
         }
+
+        // String defaultTokenUrl = System.getenv("TOKENURL");
+        // if (defaultTokenUrl == null || defaultTokenUrl.isBlank()) {
+        //     try {
+        //         setTokenUrl(UtilitiesV1.findTokenUrl(getFhirServerUrl()));
+        //     } catch (IOException e) {
+        //         e.printStackTrace();
+        //         isActive = false;
+        //     }
+        // } else {
+        //     // save the predefined token url
+        //     setTokenUrl(defaultTokenUrl);
+        // }
 
         String defaultJwtExp = System.getenv("JWT_EXP");
         if (defaultJwtExp == null || defaultJwtExp.isBlank()) {
@@ -109,8 +130,6 @@ public class SmartBackendServices
     }
 
     public void setClientId(String clientId) {
-        // First try to get token URL from metadata
-
         this.clientId = clientId;
     }
 
@@ -127,12 +146,62 @@ public class SmartBackendServices
     }
 
     public void setFhirServerUrl(String fhirServerUrl) {
+        if (fhirServerUrl == null || fhirServerUrl.isBlank()) {
+            logger.debug("Can't change the server to null or empty");
+            isActive = false;
+            return;
+        }
+
+        if (!fhirServerUrl.startsWith("http")) {
+            logger.debug("Not a valid FHIR Server URL");
+            isActive = false;
+            return;
+        }
+
+        if (fhirServerUrl.equals(this.fhirServerUrl)) {
+            // This is same fhir server. No need to set.
+            logger.debug("Already set to this FHIR server (" + fhirServerUrl + ")");
+            return;
+        }
+
         this.fhirServerUrl = fhirServerUrl;
+        String newTokenUrl;
+
+        try {
+            newTokenUrl = UtilitiesV1.findTokenUrl(fhirServerUrl);
+        } catch (IOException | RestClientException e) {
+            e.printStackTrace();
+            logger.debug("Finding Token Server URL failed. SMARTBackendService becoming inactive.");
+            isActive = false;
+            return;
+        }
+
+        if (newTokenUrl == null || newTokenUrl.isBlank()) {
+            logger.debug("The new FHIR server may not have metadata setup correctly. Failed to get the token URL");
+            isActive = false;
+            return;
+        }
+
+        setTokenUrl(newTokenUrl);
+
+        // Since the fhir server is set. Reset token and expiration time
+        this.accessToken = null;
+        this.tokenExpiration = 0L;
+
+        isActive = true;
     }
 
     public String getPublicKey() throws IOException {
         Path path = Path.of(publicKeyFilePath);
         return Files.readString(path);
+    }
+
+    public boolean isActive() {
+        if (disabled) {
+            return false;
+        }
+        
+        return this.isActive;
     }
 
     /***
@@ -184,6 +253,12 @@ public class SmartBackendServices
     }
 
     public String getAccessToken(String tokenServerUrl) throws UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, CertificateException, IOException {
+        if (!isActive) {
+            // The backend access token retrieval is not configured.
+            logger.info("SMARTonFHIR Backend Services is not configured to run.");
+            return null;
+        }
+
         // check the token expiration if token is not null
         if (accessToken != null) {
             Long currentTime = new Date().getTime()/1000;

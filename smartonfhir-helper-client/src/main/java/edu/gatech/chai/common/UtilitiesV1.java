@@ -14,6 +14,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.core.JsonParseException;
@@ -24,7 +25,7 @@ import ca.uhn.fhir.parser.IParser;
 public class UtilitiesV1 {
     public static final FhirContext myFhirContext = FhirContext.forR4(); 
 
-    public static String findTokenUrl(String fhirServerUrl) throws JsonParseException, IOException {
+    public static String findTokenUrl(String fhirServerUrl) throws JsonParseException, IOException, RestClientException {
         String fhirMetaUrl;
         String retToken = null;
         
