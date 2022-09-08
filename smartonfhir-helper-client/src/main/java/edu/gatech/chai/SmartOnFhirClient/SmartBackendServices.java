@@ -145,23 +145,23 @@ public class SmartBackendServices
         return this.fhirServerUrl;
     }
 
-    public void setFhirServerUrl(String fhirServerUrl) {
+    public SmartBackendServices setFhirServerUrl(String fhirServerUrl) {
         if (fhirServerUrl == null || fhirServerUrl.isBlank()) {
             logger.debug("Can't change the server to null or empty");
             isActive = false;
-            return;
+            return this;
         }
 
         if (!fhirServerUrl.startsWith("http")) {
             logger.debug("Not a valid FHIR Server URL");
             isActive = false;
-            return;
+            return this;
         }
 
         if (fhirServerUrl.equals(this.fhirServerUrl)) {
             // This is same fhir server. No need to set.
             logger.debug("Already set to this FHIR server (" + fhirServerUrl + ")");
-            return;
+            return this;
         }
 
         this.fhirServerUrl = fhirServerUrl;
@@ -173,13 +173,13 @@ public class SmartBackendServices
             e.printStackTrace();
             logger.debug("Finding Token Server URL failed. SMARTBackendService becoming inactive.");
             isActive = false;
-            return;
+            return this;
         }
 
         if (newTokenUrl == null || newTokenUrl.isBlank()) {
             logger.debug("The new FHIR server may not have metadata setup correctly. Failed to get the token URL");
             isActive = false;
-            return;
+            return this;
         }
 
         setTokenUrl(newTokenUrl);
@@ -189,6 +189,8 @@ public class SmartBackendServices
         this.tokenExpiration = 0L;
 
         isActive = true;
+        
+        return this;
     }
 
     public String getPublicKey() throws IOException {
