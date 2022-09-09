@@ -60,42 +60,42 @@ public class SmartBackendServices
 
     public SmartBackendServices(String fhirServerUrl) {
         String disabledString = System.getenv("SMARTONFHIR");
-        if (disabledString != null && !disabledString.isBlank()) {
+        if (disabledString != null && !disabledString.isEmpty()) {
             if ("disabled".equalsIgnoreCase(disabledString)) {
                 disabled = true;
                 return;
             }
         }
         publicKeyFilePath = System.getenv("PUBLIC_KEY_FILE");
-        if (publicKeyFilePath == null || publicKeyFilePath.isBlank()) {
+        if (publicKeyFilePath == null || publicKeyFilePath.isEmpty()) {
             publicKeyFilePath = "publicKey";
         }
 
         privateKeyFilePath = System.getenv("PRIVATE_KEY_FILE");
-        if (privateKeyFilePath == null || privateKeyFilePath.isBlank()) {
+        if (privateKeyFilePath == null || privateKeyFilePath.isEmpty()) {
             privateKeyFilePath = ".privateKey";
         }
 
         jwksFilePath = System.getenv("JWKS_FILE");
-        if (jwksFilePath == null || jwksFilePath.isBlank()) {
+        if (jwksFilePath == null || jwksFilePath.isEmpty()) {
             jwksFilePath = "jwks.json";
         }
 
         keystoreFilePath = System.getenv("KEYSTORE_FILE");
-        if (keystoreFilePath == null || keystoreFilePath.isBlank()) {
+        if (keystoreFilePath == null || keystoreFilePath.isEmpty()) {
             keystoreFilePath = "bserKeystore.jks";
         }
 
         String myClientId = System.getenv("CLIENTID");
-        if (myClientId == null || myClientId.isBlank()) {
+        if (myClientId == null || myClientId.isEmpty()) {
             isActive = false;
         } else {
             setClientId(myClientId);
         }
 
         String defaultfhirServerUrl = System.getenv("FHIRSERVER_URL");
-        if (fhirServerUrl == null || fhirServerUrl.isBlank()) {
-            if (defaultfhirServerUrl != null && !defaultfhirServerUrl.isBlank()) {
+        if (fhirServerUrl == null || fhirServerUrl.isEmpty()) {
+            if (defaultfhirServerUrl != null && !defaultfhirServerUrl.isEmpty()) {
                 setFhirServerUrl(defaultfhirServerUrl);
             } else {
                 isActive = false;
@@ -105,7 +105,7 @@ public class SmartBackendServices
         }
 
         // String defaultTokenUrl = System.getenv("TOKENURL");
-        // if (defaultTokenUrl == null || defaultTokenUrl.isBlank()) {
+        // if (defaultTokenUrl == null || defaultTokenUrl.isEmpty()) {
         //     try {
         //         setTokenUrl(UtilitiesV1.findTokenUrl(getFhirServerUrl()));
         //     } catch (IOException e) {
@@ -118,7 +118,7 @@ public class SmartBackendServices
         // }
 
         String defaultJwtExp = System.getenv("JWT_EXP");
-        if (defaultJwtExp == null || defaultJwtExp.isBlank()) {
+        if (defaultJwtExp == null || defaultJwtExp.isEmpty()) {
             jwtExp = 300L;
         } else {
             jwtExp = Long.valueOf(defaultJwtExp);
@@ -146,7 +146,7 @@ public class SmartBackendServices
     }
 
     public SmartBackendServices setFhirServerUrl(String fhirServerUrl) {
-        if (fhirServerUrl == null || fhirServerUrl.isBlank()) {
+        if (fhirServerUrl == null || fhirServerUrl.isEmpty()) {
             logger.debug("Can't change the server to null or empty");
             isActive = false;
             return this;
@@ -176,7 +176,7 @@ public class SmartBackendServices
             return this;
         }
 
-        if (newTokenUrl == null || newTokenUrl.isBlank()) {
+        if (newTokenUrl == null || newTokenUrl.isEmpty()) {
             logger.debug("The new FHIR server may not have metadata setup correctly. Failed to get the token URL");
             isActive = false;
             return this;
@@ -217,7 +217,7 @@ public class SmartBackendServices
         String jwks = null;
 
         // currently, we only have one jwk.
-        if (jwk != null && !jwk.isBlank()) {
+        if (jwk != null && !jwk.isEmpty()) {
             jwks = "{\"keys\": [" + jwk + "]}"; 
         }
 
@@ -269,7 +269,7 @@ public class SmartBackendServices
             }
         }
 
-        if (tokenServerUrl == null || tokenServerUrl.isBlank()) {
+        if (tokenServerUrl == null || tokenServerUrl.isEmpty()) {
             tokenServerUrl = getTokenUrl();
         }
 
