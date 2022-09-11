@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -59,6 +60,13 @@ public class SmartBackendServices
     }
 
     public SmartBackendServices(String fhirServerUrl) {
+        // Even if SMART Backend Service is disabled, 
+        // we should still publish the public key.
+        jwksFilePath = System.getenv("JWKS_FILE");
+        if (jwksFilePath == null || jwksFilePath.isEmpty()) {
+            jwksFilePath = "jwks.json";
+        }
+
         String disabledString = System.getenv("SMARTONFHIR");
         if (disabledString != null && !disabledString.isEmpty()) {
             if ("disabled".equalsIgnoreCase(disabledString)) {
@@ -74,11 +82,6 @@ public class SmartBackendServices
         privateKeyFilePath = System.getenv("PRIVATE_KEY_FILE");
         if (privateKeyFilePath == null || privateKeyFilePath.isEmpty()) {
             privateKeyFilePath = ".privateKey";
-        }
-
-        jwksFilePath = System.getenv("JWKS_FILE");
-        if (jwksFilePath == null || jwksFilePath.isEmpty()) {
-            jwksFilePath = "jwks.json";
         }
 
         keystoreFilePath = System.getenv("KEYSTORE_FILE");
@@ -211,7 +214,7 @@ public class SmartBackendServices
      * @return JWKS
      * @throws IOException
      */
-    public String getJWKS() throws IOException {
+    public String getJWKS() throws IOException, NullPointerException {
         Path path = Path.of(jwksFilePath);
         String jwk = Files.readString(path);
         String jwks = null;
