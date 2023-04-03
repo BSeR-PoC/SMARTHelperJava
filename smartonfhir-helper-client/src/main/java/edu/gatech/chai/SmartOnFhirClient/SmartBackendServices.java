@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -27,7 +26,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import edu.gatech.chai.common.UtilitiesV1;
@@ -55,11 +53,20 @@ public class SmartBackendServices
     private boolean isActive = true;
     private boolean disabled = false;
 
+    // Map to manage tokenUrl, token, and token expiration
+    private Map<String, String> tokenUrlMap;
+    private Map<String, String> tokenMap;
+    private Map<String, Long> tokenExpirationMap;
+
     public SmartBackendServices() {
         this(null);
     }
 
     public SmartBackendServices(String fhirServerUrl) {
+        tokenUrlMap = new HashMap<String, String>();
+        tokenMap = new HashMap<String, String>();
+        tokenExpirationMap = new HashMap<String, Long>();
+
         // Even if SMART Backend Service is disabled, 
         // we should still publish the public key.
         jwksFilePath = System.getenv("JWKS_FILE");
@@ -167,18 +174,20 @@ public class SmartBackendServices
             return this;
         }
 
-        this.fhirServerUrl = fhirServerUrl;
-        String newTokenUrl;
+        // We are changing the fhir server URL. We may already had this before. 
+        // If so, return those as setting token URL and token are expensive.
+        String existingTokenUrl = tokenUrlMap.get(fhirServerUrl);
+        if (existingTokenUrl != null && !existingTokenUrl.isBlank()) {
+            setTokenUrl(existingTokenUrl);
+            setAccessToken(tokenMap.get(fhirServerUrl));
+            setTokenExpiration(tokenExpirationMap.get(fhirServerUrl));
+            logger.debug("FHIR server (" + fhirServerUrl + ") has already beeing set up for the token.");
 
-        try {
-            newTokenUrl = UtilitiesV1.findTokenUrl(fhirServerUrl);
-        } catch (IOException | RestClientException e) {
-            e.printStackTrace();
-            logger.debug("Finding Token Server URL failed. SMARTBackendService becoming inactive.");
-            isActive = false;
             return this;
         }
 
+        this.fhirServerUrl = fhirServerUrl;
+        String newTokenUrl = UtilitiesV1.findTokenUrl(fhirServerUrl);
         if (newTokenUrl == null || newTokenUrl.isBlank()) {
             logger.debug("The new FHIR server may not have metadata setup correctly. Failed to get the token URL");
             isActive = false;
@@ -188,8 +197,13 @@ public class SmartBackendServices
         setTokenUrl(newTokenUrl);
 
         // Since the fhir server is set. Reset token and expiration time
-        this.accessToken = null;
-        this.tokenExpiration = 0L;
+        setAccessToken(null);
+        setTokenExpiration(0L);
+
+        // set up the token management maps
+        tokenUrlMap.put(fhirServerUrl, newTokenUrl);
+        tokenMap.put(fhirServerUrl, this.accessToken);
+        tokenExpirationMap.put(fhirServerUrl, this.tokenExpiration);
 
         isActive = true;
         
@@ -257,6 +271,18 @@ public class SmartBackendServices
         return Jwts.builder().setHeader(header).setClaims(claims).signWith(key).compact();
     }
 
+    public void setTokenExpiration(Long tokenExpiration) {
+        this.tokenExpiration = tokenExpiration;
+    }
+    
+    public Long getTokenExpiration() {
+        return this.tokenExpiration;
+    }
+
+    public void setAccessToken(String accessToken) {
+        this.accessToken = accessToken;
+    }
+
     public String getAccessToken(String tokenServerUrl) throws UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, CertificateException, IOException {
         if (!isActive) {
             // The backend access token retrieval is not configured.
@@ -297,6 +323,10 @@ public class SmartBackendServices
             Long currentTime = new Date().getTime()/1000;
             tokenExpiration = currentTime + tokenJson.getLong("expires_in");
 
+            tokenUrlMap.put(this.fhirServerUrl, tokenServerUrl);
+            tokenMap.put(this.fhirServerUrl, this.accessToken);
+            tokenExpirationMap.put(this.fhirServerUrl, this.tokenExpiration);
+    
             return accessToken;
         } else {
             return null;

@@ -14,6 +14,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
@@ -23,9 +24,11 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 
 public class UtilitiesV1 {
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(UtilitiesV1.class);
+
     public static final FhirContext myFhirContext = FhirContext.forR4(); 
 
-    public static String findTokenUrl(String fhirServerUrl) throws JsonParseException, IOException, RestClientException {
+    public static String findTokenUrl(String fhirServerUrl) {
         String fhirMetaUrl;
         String retToken = null;
         
@@ -38,27 +41,38 @@ public class UtilitiesV1 {
             fhirMetaUrl = fhirServerUrl+"/.well-known/smart-configuration";
         }
 
+        logger.debug(".wll-know config: " + fhirMetaUrl);
         HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(new MediaType("application", "json+fhir"));
         HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
 
-        ResponseEntity<String> response = restTemplate.exchange(fhirMetaUrl, HttpMethod.GET, requestEntity, String.class);
-        if (response.getStatusCode() == HttpStatus.OK) {
-            JSONObject smartConfigJson = new JSONObject(response.getBody());
-            return smartConfigJson.get("token_endpoint").toString();
-        } else {
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(fhirMetaUrl, HttpMethod.GET, requestEntity, String.class);
+            if (response.getStatusCode() == HttpStatus.OK) {
+                JSONObject smartConfigJson = new JSONObject(response.getBody());
+                return smartConfigJson.get("token_endpoint").toString();
+            } 
+        } catch (Exception e) {
+            logger.info(".well-known configuration failed with an exception\n" + e.getStackTrace());
+        } finally {
             // Get token url from FHIR standard capability statement
-
             if (fhirServerUrl.endsWith("/")) {
                 fhirMetaUrl = fhirServerUrl+"metadata";
             } else {
                 fhirMetaUrl = fhirServerUrl+"/metadata";
             }
 
+            logger.debug("FHIR standard metadata: " + fhirMetaUrl);
     		headers.setContentType(new MediaType("application", "json+fhir"));
             requestEntity = new HttpEntity<>(headers);
-             response = restTemplate.exchange(fhirMetaUrl, HttpMethod.GET, requestEntity, String.class);
-            String capabilityStatementString = response.getBody();
+            String capabilityStatementString;
+            try {
+                ResponseEntity<String> response = restTemplate.exchange(fhirMetaUrl, HttpMethod.GET, requestEntity, String.class);
+                capabilityStatementString = response.getBody();
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
         
             IParser parser = UtilitiesV1.myFhirContext.newJsonParser();
             CapabilityStatement capabilityStatement = (CapabilityStatement) parser.parseResource(capabilityStatementString);
@@ -74,8 +88,6 @@ public class UtilitiesV1 {
                     }
                 }
             }
-            
-            retToken = null;
         }
 
         return retToken;

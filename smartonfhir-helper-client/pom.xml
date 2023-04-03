@@ -7,7 +7,7 @@
   <groupId>edu.gatech.chai</groupId>
   <artifactId>smartonfhir-helper-client</artifactId>
   <packaging>jar</packaging>
-  <version>0.0.1</version>
+  <version>0.0.2</version>
 
   <name>smartonfhir-helper-client</name>
   <!-- FIXME change it to the project's website -->
@@ -15,9 +15,12 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <hapi_stable_version>5.7.0</hapi_stable_version>
+    <java.version>17</java.version>
+    <maven.compiler.release>${java.version}</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <hapi_stable_version>6.4.1</hapi_stable_version>
 		<spring_version>5.3.19</spring_version>
-    <jackson_version>2.13.3</jackson_version>
+    <jackson_version>2.15.0-rc1</jackson_version>
   </properties>
 
   <dependencies>
@@ -101,8 +104,7 @@
           <artifactId>maven-compiler-plugin</artifactId>
           <version>3.8.1</version>
           <configuration>
-            <source>1.8</source>
-            <target>1.8</target>
+  					<release>17</release>
           </configuration>
         </plugin>
         <plugin>
