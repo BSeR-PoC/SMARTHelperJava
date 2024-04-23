@@ -21,6 +21,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -316,7 +317,7 @@ public class SmartBackendServices
         HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(formDataMap, headers);
         ResponseEntity<String> response = restTemplate.exchange(tokenServerUrl, HttpMethod.POST, entity, String.class);
         
-        HttpStatus responseStatus = response.getStatusCode();
+        HttpStatusCode responseStatus = response.getStatusCode();
         if (responseStatus == HttpStatus.CREATED || responseStatus == HttpStatus.OK) {
             accessToken = response.getBody();
             JSONObject tokenJson = new JSONObject(accessToken);

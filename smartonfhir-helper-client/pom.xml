@@ -7,7 +7,7 @@
   <groupId>edu.gatech.chai</groupId>
   <artifactId>smartonfhir-helper-client</artifactId>
   <packaging>jar</packaging>
-  <version>0.0.3</version>
+  <version>0.1.0</version>
 
   <name>smartonfhir-helper-client</name>
   <url>https://github.com/BSeR-PoC/SMARTHelperJava</url>
@@ -17,8 +17,8 @@
     <java.version>17</java.version>
     <maven.compiler.release>${java.version}</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <hapi_stable_version>6.4.1</hapi_stable_version>
-		<spring_version>5.3.19</spring_version>
+    <hapi_stable_version>7.0.2</hapi_stable_version>
+		<spring_version>6.1.4</spring_version>
     <jackson_version>2.15.0-rc1</jackson_version>
   </properties>
 
@@ -79,7 +79,7 @@
     <dependency>
       <groupId>org.json</groupId>
       <artifactId>json</artifactId>
-    <version>20230227</version>
+    <version>20240303</version>
 </dependency>
 
 
